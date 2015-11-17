@@ -24,6 +24,7 @@ clientListener.stream('statuses/filter', {track: '#askswitchfly'}, function(stre
 	});    
 	
 	stream.on('error', function(error) {
+		console.log(error);
 	    throw error;
 	});
 });
@@ -34,11 +35,10 @@ function shouldPostTweets() {
 	if(tweets.filter(needsToBeReplied).length){
 		for(var i = 0, len = tweets.length; i < len; i++) {
 			if(!tweets[i].hasBeenReplied) {
-				client.post('statuses/update', { status: '@'+ tweets[i].username  + 'Rooms start at $95/night', in_reply_to_status_id:tweets[i].id }, function (err, tweet, res) {
-					if(!err) {
-						tweets[i].hasBeenReplied = true;
-					}
-				});
+				console.log('trying to post');
+				client.post('statuses/update', { status: '@'+ tweets[i].username  + 'Rooms start at $95/night' , in_reply_to_status_id:tweets[i].id }, function (err, tweet, res) {			});
+				tweets[i].hasBeenReplied = true;
+				console.log(tweets);
 			}
 		}
 	}
