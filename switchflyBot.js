@@ -76,12 +76,21 @@ function getHotelResults(params) {
 	      var responseBody = response.getBody();
 	      var hotels = responseBody.data.hotels;
 	      console.log(hotels[0].nightlyMinPrice.cashValueInCustomerCurrency);
-	      //console.log(hotels);
-	    //   for (var hotel in hotels) {
-	    //    if (hotels.hasOwnProperty(hotel)) {
-	    //       console.log(hotels[hotel].nightlyMinPrice.cashValueInCustomerCurrency);
-	    //    }
-	    // }
+	      //set initial room 
+      	  var cheapestRoom = hotels[0].nightlyMinPrice.cashValueInCustomerCurrency;
+      	  //console.log(hotels);
+	      for (var hotel in hotels) {
+	      	if (hotels.hasOwnProperty(hotel)) {
+	       		var currentHotelRoomPrice = hotels[hotel].nightlyMinPrice.cashValueInCustomerCurrency;
+	       		if(currentHotelRoomPrice<=cheapestRoom) {
+	       			cheapestRoom=currentHotelRoomPrice;
+	       		}
+	        	// console.log(hotels[hotel].nightlyMinPrice.cashValueInCustomerCurrency);
+	       	}
+	      }
+      
+      	console.log('Rooms start at $' + cheapestRoom + '/night');
+	  
 	  }).fail(function(error){
 	  	console.log(error);
 	  	console.log('fail');
