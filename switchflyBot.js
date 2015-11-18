@@ -1,8 +1,14 @@
 var keys = {
-	  	consumer_key: 'gylXWAs8XXReZXN6uqyfJjY9R',
-		consumer_secret: '9KopFkO5GuicJ5fylaVLdiK7jY67Z2SEQjQ7Eqz2OG7kJvNSwv',
-		access_token_key: '4259570714-0VBchAWCiA6rck6Z60Nyxr0sR3z6TP3xGJldJHh',
-		access_token_secret: 'HVvcoEkXxEQSYufiK0a3trQ9rzmHzjKzaBj64aRPRPNYF'
+	//switchfly credentials 
+// 	  	consumer_key: 'O3gOvqaH1MkHTxH0lCMEJqnak',
+// 		consumer_secret: '9KopFkO5GuicJ5fylaVLdiK7jY67Z2SEQjQ7Eqz2OG7kJvNSwv',
+// 		access_token_key: '4259570714-0VBchAWCiA6rck6Z60Nyxr0sR3z6TP3xGJldJHh',
+// 		access_token_secret: 'HVvcoEkXxEQSYufiK0a3trQ9rzmHzjKzaBj64aRPRPNYF'
+//ivan credentials
+		consumer_key: 'O3gOvqaH1MkHTxH0lCMEJqnak',
+		consumer_secret: 'MuPrGIyQ4fGWtnr7ejT5suiWxHB5IKZ52DUP7gwdCnnxRSGW4K',
+		access_token_key: '2936743710-uZBQ0KPZq8GLowAA8S6dT0lXFZeL3XSTQ2TrqNm',
+		access_token_secret: 'qA37a8148wvFrwtEKxhpKa2Oo4I9us2uxwP75iDJP3Zy7'
    	},
 	Twitter = require('twitter'),
     clientListener = new Twitter(keys),
@@ -13,6 +19,7 @@ var keys = {
 clientListener.stream('statuses/filter', {track: '#askswitchfly'}, function(stream) {
 	console.log('Listening for Tweets...');
 	stream.on('data', function(tweet) {
+		console.log("tweet: " + tweet.text);
 		if(tweet) {
 			tweets.push({
 				id: tweet.id_str,
@@ -21,11 +28,9 @@ clientListener.stream('statuses/filter', {track: '#askswitchfly'}, function(stre
 				hasBeenReplied: false
 			});
 		}
-		stream.destroy();   
 	});    
 	
 	stream.on('error', function(error) {
-		console.log(error);
 	    throw error;
 	});
 });
@@ -37,19 +42,18 @@ function shouldPostTweets() {
 		for(var i = 0, len = tweets.length; i < len; i++) {
 			if(!tweets[i].hasBeenReplied) {
 				tweets[i].hasBeenReplied = true;
-				console.log('before posting . . .');
+				console.log('searching for hotels . . .');
 				getHotelResults(parseTweet(tweets[i].text), i, function(index, cheapestRoom) {
-					console.log('trying to post . . .');
+					console.log('trying to reply . . .');
 					client.post('statuses/update', { status: '@'+ tweets[index].username  + ' Rooms start at $' + cheapestRoom + '/night' , in_reply_to_status_id:tweets[index].id }, function (err, tweet, res) {		
-						if(!error) {
-							console.log('posted');
+						console.log('replied to tweet!');
+						if(!err) {
 							tweets[index].hasBeenReplied = true;
 						}
 					});					
 				});
 			}
 		}
-		console.log('for loop finished . . .');
 	}
 }
 
@@ -74,24 +78,18 @@ function getHotelResults(params, index, callback) {
 	
 	requestify.get('https://americanexpress.v155test.switchfly.com/apps/api/hotels?exclude=hotelFiltersAmenities,roomAmenities,propertyDescription,rooms&query=%7B%22location%22%3A%22%7Cairport%3A'+ params.airportCode + '%22%2C%22startDate%22%3A' + startDate.getTime() + '%2C%22endDate%22%3A' + endDate.getTime() + '%2C%22firstRoomOccupancy%22%3A%7B%22numAdults%22%3A1%2C%22numChildren%22%3A0%2C%22childAges%22%3A%5B%5D%7D%7D')
 	  .then(function(response) {
-	      // Get the response body (JSON parsed or jQuery object for XMLs)
-	      var responseBody = response.getBody();
-	      var hotels = responseBody.data.hotels;
-	      console.log(hotels[0].nightlyMinPrice.cashValueInCustomerCurrency);
-	      //set initial room 
-      	  var cheapestRoom = getCheapestRoom(hotels);
-      
-      		console.log('Rooms start at $' + cheapestRoom + '/night');
+	    var responseBody = response.getBody(),
+	    	hotels = responseBody.data.hotels,
+	        cheapestRoom = getCheapestRoom(hotels);
 	  		
-	  		if(callback !== undefined) {
-	  			callback(index, cheapestRoom);
-	  		}
+	  	if(callback !== undefined) {
+	  		callback(index, cheapestRoom);
+	  	}
 
-	  		return cheapestRoom;
+	  	return cheapestRoom;
 	  }).fail(function(error){
 	  	console.log('fail: ' + error);
 	  });
-	console.log('finish'); 
 }
 
 function getCheapestRoom(hotels) {
@@ -99,7 +97,7 @@ function getCheapestRoom(hotels) {
 	      for (var hotel in hotels) {
 	      	if (hotels.hasOwnProperty(hotel)) {
 	       		var currentHotelRoomPrice = hotels[hotel].nightlyMinPrice.cashValueInCustomerCurrency;
-	       		if(currentHotelRoomPrice<=cheapestRoom) {
+	       		if(currentHotelRoomPrice <= cheapestRoom) {
 	       			cheapestRoom=currentHotelRoomPrice;
 	       		}
 	       	}
