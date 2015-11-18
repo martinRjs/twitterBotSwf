@@ -10,11 +10,14 @@ var keys = {
 		access_token_key: '2936743710-uZBQ0KPZq8GLowAA8S6dT0lXFZeL3XSTQ2TrqNm',
 		access_token_secret: 'qA37a8148wvFrwtEKxhpKa2Oo4I9us2uxwP75iDJP3Zy7'
    	},
+   //	var TinyURL = require('tinyurl'),
+
 	Twitter = require('twitter'),
     clientListener = new Twitter(keys),
     client = new Twitter(keys),
     requestify = require('requestify');
-    tweets = [];
+    tweets = []
+    TinyURL = require('tinyurl');
 
 clientListener.stream('statuses/filter', {track: '#askswitchfly'}, function(stream) {
 	console.log('Listening for Tweets...');
@@ -43,9 +46,9 @@ function shouldPostTweets() {
 			if(!tweets[i].hasBeenReplied) {
 				tweets[i].hasBeenReplied = true;
 				console.log('searching for hotels . . .');
-				getHotelResults(parseTweet(tweets[i].text), i, function(index, cheapestRoom) {
+				getHotelResults(parseTweet(tweets[i].text), i, function(index, cheapestRoom, shortUrl) {
 					console.log('trying to reply . . .');
-					client.post('statuses/update', { status: '@'+ tweets[index].username  + ' Rooms start at $' + cheapestRoom + '/night' , in_reply_to_status_id:tweets[index].id }, function (err, tweet, res) {		
+					client.post('statuses/update', { status: '@'+ tweets[index].username  + ' Rooms start at $' + cheapestRoom + '/night ' + shortUrl, in_reply_to_status_id:tweets[index].id }, function (err, tweet, res) {		
 						console.log('replied to tweet!');
 						if(!err) {
 							tweets[index].hasBeenReplied = true;
@@ -72,19 +75,45 @@ function parseTweet(text) {
  	 };
 }
 
+function parseEmoji(emojiCode) {
+	if (emojiCode === '\uD83C\uDF09') {
+		return 'SFO';
+	}
+	else if (emojiCode === '\uD83D\uDDFD') {
+		return 'JFK';
+	}
+	else return emojiCode;
+}
+
 function getHotelResults(params, index, callback) {
-	var startDate = new Date(params.startDate)
-		endDate = new Date(startDate.getTime() + parseInt(params.numberOfNights)*24*60*60*1000);
+
+	var startDate = new Date(params.startDate),
+		endDate = new Date(startDate.getTime() + parseInt(params.numberOfNights)*24*60*60*1000),
+		airportCode = parseEmoji(params.airportCode);
+
+		stringStartDate = (startDate.getMonth()+1) + '/' + startDate.getDate() + '/' + startDate.getFullYear();
+		stringEndDate = (endDate.getMonth()+1) + '/' + endDate.getDate() + '/' + endDate.getFullYear();
+
+		console.log(stringStartDate + ' ' + stringEndDate);
 	
-	requestify.get('https://americanexpress.v155test.switchfly.com/apps/api/hotels?exclude=hotelFiltersAmenities,roomAmenities,propertyDescription,rooms&query=%7B%22location%22%3A%22%7Cairport%3A'+ params.airportCode + '%22%2C%22startDate%22%3A' + startDate.getTime() + '%2C%22endDate%22%3A' + endDate.getTime() + '%2C%22firstRoomOccupancy%22%3A%7B%22numAdults%22%3A1%2C%22numChildren%22%3A0%2C%22childAges%22%3A%5B%5D%7D%7D')
+	requestify.get('https://americanexpress.v155test.switchfly.com/apps/api/hotels?exclude=hotelFiltersAmenities,roomAmenities,propertyDescription,rooms&query=%7B%22location%22%3A%22%7Cairport%3A'+ airportCode + '%22%2C%22startDate%22%3A' + startDate.getTime() + '%2C%22endDate%22%3A' + endDate.getTime() + '%2C%22firstRoomOccupancy%22%3A%7B%22numAdults%22%3A1%2C%22numChildren%22%3A0%2C%22childAges%22%3A%5B%5D%7D%7D')
 	  .then(function(response) {
 	    var responseBody = response.getBody(),
 	    	hotels = responseBody.data.hotels,
 	        cheapestRoom = getCheapestRoom(hotels);
+
+	         TinyURL.shorten('https://plg01.v155test.switchfly.com/travel/arc_waiting.cfm?nav=unitedmp&tab=r&air_room_car_radio=room&area2=|airport:' 
+	         	+ params.airportCode + '&date1='+ stringStartDate +'&date2='+ stringEndDate +
+	         	'&num_rooms=1&room_info={"rooms":[{"childAges":[],"numAdults":2,"numSeniors":0,"numInfantsInSeats":0,"numInfantsInLaps":0}]}&submit=Submit', function(shortUrl) {
+    			console.log(shortUrl);  
+    			if(callback !== undefined) {
+	  				callback(index, cheapestRoom, shortUrl);
+	  			}
+			});
 	  		
-	  	if(callback !== undefined) {
-	  		callback(index, cheapestRoom);
-	  	}
+	  	// if(callback !== undefined) {
+	  	// 	callback(index, cheapestRoom);
+	  	// }
 
 	  	return cheapestRoom;
 	  }).fail(function(error){
